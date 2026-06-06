@@ -1,0 +1,529 @@
+-- ╔══════════════════════════════════════════╗
+-- ║        ANTI-AFK SYSTEM v2.0              ║
+-- ║     Made with ❤️  | LocalScript          ║
+-- ╚══════════════════════════════════════════╝
+
+local Players = game:GetService("Players")
+local VirtualUser = game:GetService("VirtualUser")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- ══════════════════════════════
+--         CONFIG
+-- ══════════════════════════════
+local CONFIG = {
+    Title       = "⚡ ANTI-AFK",
+    Version     = "v2.0",
+    AccentColor = Color3.fromRGB(0, 210, 255),
+    BgColor     = Color3.fromRGB(10, 12, 20),
+    CardColor   = Color3.fromRGB(16, 20, 35),
+    TextColor   = Color3.fromRGB(220, 230, 255),
+    GreenColor  = Color3.fromRGB(0, 255, 160),
+    RedColor    = Color3.fromRGB(255, 80, 100),
+}
+
+-- ══════════════════════════════
+--         STATE
+-- ══════════════════════════════
+local State = {
+    enabled     = true,
+    resetCount  = 0,
+    startTime   = os.time(),
+    dragging    = false,
+    dragStart   = nil,
+    startPos    = nil,
+}
+
+-- ══════════════════════════════
+--      BUILD ScreenGui
+-- ══════════════════════════════
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AntiAFKGui"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = playerGui
+
+-- ── Main Frame ──
+local Main = Instance.new("Frame")
+Main.Name = "Main"
+Main.Size = UDim2.new(0, 280, 0, 320)
+Main.Position = UDim2.new(1, -300, 0, 20)
+Main.BackgroundColor3 = CONFIG.BgColor
+Main.BorderSizePixel = 0
+Main.ClipsDescendants = true
+Main.Parent = ScreenGui
+
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 16)
+
+-- Drop shadow
+local Shadow = Instance.new("ImageLabel")
+Shadow.Name = "Shadow"
+Shadow.AnchorPoint = Vector2.new(0.5, 0.5)
+Shadow.BackgroundTransparency = 1
+Shadow.Position = UDim2.new(0.5, 0, 0.5, 8)
+Shadow.Size = UDim2.new(1, 40, 1, 40)
+Shadow.ZIndex = -1
+Shadow.Image = "rbxassetid://6014261993"
+Shadow.ImageColor3 = Color3.fromRGB(0, 150, 255)
+Shadow.ImageTransparency = 0.6
+Shadow.ScaleType = Enum.ScaleType.Slice
+Shadow.SliceCenter = Rect.new(49, 49, 450, 450)
+Shadow.Parent = Main
+
+-- Animated gradient border
+local BorderFrame = Instance.new("Frame")
+BorderFrame.Name = "Border"
+BorderFrame.Size = UDim2.new(1, 4, 1, 4)
+BorderFrame.Position = UDim2.new(0, -2, 0, -2)
+BorderFrame.BackgroundColor3 = CONFIG.AccentColor
+BorderFrame.ZIndex = -1
+BorderFrame.Parent = Main
+Instance.new("UICorner", BorderFrame).CornerRadius = UDim.new(0, 18)
+
+-- ── Header ──
+local Header = Instance.new("Frame")
+Header.Name = "Header"
+Header.Size = UDim2.new(1, 0, 0, 60)
+Header.BackgroundColor3 = CONFIG.CardColor
+Header.BorderSizePixel = 0
+Header.Parent = Main
+
+local HeaderGrad = Instance.new("UIGradient")
+HeaderGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 40, 80)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(16, 20, 35)),
+})
+HeaderGrad.Rotation = 90
+HeaderGrad.Parent = Header
+
+-- Pulse dot
+local PulseDot = Instance.new("Frame")
+PulseDot.Name = "PulseDot"
+PulseDot.Size = UDim2.new(0, 10, 0, 10)
+PulseDot.Position = UDim2.new(0, 16, 0.5, -5)
+PulseDot.BackgroundColor3 = CONFIG.GreenColor
+PulseDot.BorderSizePixel = 0
+PulseDot.Parent = Header
+Instance.new("UICorner", PulseDot).CornerRadius = UDim.new(1, 0)
+
+-- Pulse ring animation
+local PulseRing = Instance.new("Frame")
+PulseRing.Name = "PulseRing"
+PulseRing.Size = UDim2.new(0, 10, 0, 10)
+PulseRing.Position = UDim2.new(0, 16, 0.5, -5)
+PulseRing.BackgroundTransparency = 1
+PulseRing.BorderSizePixel = 0
+PulseRing.Parent = Header
+local PRCorner = Instance.new("UICorner", PulseRing)
+PRCorner.CornerRadius = UDim.new(1, 0)
+local PRStroke = Instance.new("UIStroke", PulseRing)
+PRStroke.Color = CONFIG.GreenColor
+PRStroke.Thickness = 1.5
+
+-- Title
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Name = "Title"
+TitleLabel.Size = UDim2.new(1, -80, 1, 0)
+TitleLabel.Position = UDim2.new(0, 34, 0, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = CONFIG.Title
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.TextColor3 = CONFIG.TextColor
+TitleLabel.TextSize = 17
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Parent = Header
+
+local VersionLabel = Instance.new("TextLabel")
+VersionLabel.Size = UDim2.new(0, 40, 1, 0)
+VersionLabel.Position = UDim2.new(1, -55, 0, 0)
+VersionLabel.BackgroundTransparency = 1
+VersionLabel.Text = CONFIG.Version
+VersionLabel.Font = Enum.Font.Gotham
+VersionLabel.TextColor3 = Color3.fromRGB(100, 130, 170)
+VersionLabel.TextSize = 11
+VersionLabel.Parent = Header
+
+-- Minimize button
+local MinBtn = Instance.new("TextButton")
+MinBtn.Size = UDim2.new(0, 28, 0, 28)
+MinBtn.Position = UDim2.new(1, -38, 0.5, -14)
+MinBtn.BackgroundColor3 = Color3.fromRGB(30, 40, 65)
+MinBtn.Text = "−"
+MinBtn.Font = Enum.Font.GothamBold
+MinBtn.TextColor3 = CONFIG.TextColor
+MinBtn.TextSize = 16
+MinBtn.BorderSizePixel = 0
+MinBtn.Parent = Header
+Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(0, 8)
+
+-- ── Body ──
+local Body = Instance.new("Frame")
+Body.Name = "Body"
+Body.Size = UDim2.new(1, 0, 1, -60)
+Body.Position = UDim2.new(0, 0, 0, 60)
+Body.BackgroundTransparency = 1
+Body.Parent = Main
+
+-- Status Card
+local StatusCard = Instance.new("Frame")
+StatusCard.Size = UDim2.new(1, -24, 0, 72)
+StatusCard.Position = UDim2.new(0, 12, 0, 14)
+StatusCard.BackgroundColor3 = CONFIG.CardColor
+StatusCard.BorderSizePixel = 0
+StatusCard.Parent = Body
+Instance.new("UICorner", StatusCard).CornerRadius = UDim.new(0, 12)
+
+local StatusStroke = Instance.new("UIStroke", StatusCard)
+StatusStroke.Color = CONFIG.AccentColor
+StatusStroke.Transparency = 0.6
+StatusStroke.Thickness = 1
+
+local StatusIcon = Instance.new("TextLabel")
+StatusIcon.Size = UDim2.new(0, 44, 1, 0)
+StatusIcon.Position = UDim2.new(0, 10, 0, 0)
+StatusIcon.BackgroundTransparency = 1
+StatusIcon.Text = "🛡️"
+StatusIcon.Font = Enum.Font.GothamBold
+StatusIcon.TextSize = 28
+StatusIcon.TextColor3 = Color3.new(1,1,1)
+StatusIcon.Parent = StatusCard
+
+local StatusText = Instance.new("TextLabel")
+StatusText.Name = "StatusText"
+StatusText.Size = UDim2.new(1, -60, 0, 24)
+StatusText.Position = UDim2.new(0, 58, 0, 10)
+StatusText.BackgroundTransparency = 1
+StatusText.Text = "ĐANG BẢO VỆ"
+StatusText.Font = Enum.Font.GothamBold
+StatusText.TextColor3 = CONFIG.GreenColor
+StatusText.TextSize = 15
+StatusText.TextXAlignment = Enum.TextXAlignment.Left
+StatusText.Parent = StatusCard
+
+local StatusSub = Instance.new("TextLabel")
+StatusSub.Name = "StatusSub"
+StatusSub.Size = UDim2.new(1, -60, 0, 18)
+StatusSub.Position = UDim2.new(0, 58, 0, 36)
+StatusSub.BackgroundTransparency = 1
+StatusSub.Text = "Hệ thống Anti-AFK đang hoạt động"
+StatusSub.Font = Enum.Font.Gotham
+StatusSub.TextColor3 = Color3.fromRGB(100, 130, 170)
+StatusSub.TextSize = 11
+StatusSub.TextXAlignment = Enum.TextXAlignment.Left
+StatusSub.Parent = StatusCard
+
+-- Stats Row
+local StatsRow = Instance.new("Frame")
+StatsRow.Size = UDim2.new(1, -24, 0, 64)
+StatsRow.Position = UDim2.new(0, 12, 0, 98)
+StatsRow.BackgroundTransparency = 1
+StatsRow.Parent = Body
+
+local function makeStatBox(parent, pos, icon, labelTxt, valueName)
+    local box = Instance.new("Frame")
+    box.Size = UDim2.new(0.485, 0, 1, 0)
+    box.Position = pos
+    box.BackgroundColor3 = CONFIG.CardColor
+    box.BorderSizePixel = 0
+    box.Parent = parent
+    Instance.new("UICorner", box).CornerRadius = UDim.new(0, 10)
+
+    local ic = Instance.new("TextLabel")
+    ic.Size = UDim2.new(1, 0, 0, 26)
+    ic.Position = UDim2.new(0, 0, 0, 6)
+    ic.BackgroundTransparency = 1
+    ic.Text = icon
+    ic.Font = Enum.Font.GothamBold
+    ic.TextSize = 20
+    ic.TextColor3 = Color3.new(1,1,1)
+    ic.Parent = box
+
+    local val = Instance.new("TextLabel")
+    val.Name = valueName
+    val.Size = UDim2.new(1, 0, 0, 18)
+    val.Position = UDim2.new(0, 0, 0, 28)
+    val.BackgroundTransparency = 1
+    val.Text = "0"
+    val.Font = Enum.Font.GothamBold
+    val.TextColor3 = CONFIG.AccentColor
+    val.TextSize = 16
+    val.Parent = box
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, 0, 0, 14)
+    lbl.Position = UDim2.new(0, 0, 1, -16)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = labelTxt
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextColor3 = Color3.fromRGB(90, 110, 150)
+    lbl.TextSize = 10
+    lbl.Parent = box
+
+    return box, val
+end
+
+local _, ResetCountLabel = makeStatBox(StatsRow, UDim2.new(0,0,0,0), "🔄", "LẦN RESET", "ResetCount")
+local _, UptimeLabel     = makeStatBox(StatsRow, UDim2.new(0.515,0,0,0), "⏱️", "THỜI GIAN", "Uptime")
+
+-- Progress bar (next reset)
+local ProgressCard = Instance.new("Frame")
+ProgressCard.Size = UDim2.new(1, -24, 0, 52)
+ProgressCard.Position = UDim2.new(0, 12, 0, 174)
+ProgressCard.BackgroundColor3 = CONFIG.CardColor
+ProgressCard.BorderSizePixel = 0
+ProgressCard.Parent = Body
+Instance.new("UICorner", ProgressCard).CornerRadius = UDim.new(0, 10)
+
+local ProgTitle = Instance.new("TextLabel")
+ProgTitle.Size = UDim2.new(1, -12, 0, 20)
+ProgTitle.Position = UDim2.new(0, 12, 0, 4)
+ProgTitle.BackgroundTransparency = 1
+ProgTitle.Text = "TRẠNG THÁI KẾT NỐI"
+ProgTitle.Font = Enum.Font.GothamBold
+ProgTitle.TextColor3 = Color3.fromRGB(100, 130, 170)
+ProgTitle.TextSize = 10
+ProgTitle.TextXAlignment = Enum.TextXAlignment.Left
+ProgTitle.Parent = ProgressCard
+
+local ProgBg = Instance.new("Frame")
+ProgBg.Size = UDim2.new(1, -24, 0, 8)
+ProgBg.Position = UDim2.new(0, 12, 0, 30)
+ProgBg.BackgroundColor3 = Color3.fromRGB(25, 35, 55)
+ProgBg.BorderSizePixel = 0
+ProgBg.Parent = ProgressCard
+Instance.new("UICorner", ProgBg).CornerRadius = UDim.new(1, 0)
+
+local ProgFill = Instance.new("Frame")
+ProgFill.Name = "Fill"
+ProgFill.Size = UDim2.new(1, 0, 1, 0)
+ProgFill.BackgroundColor3 = CONFIG.AccentColor
+ProgFill.BorderSizePixel = 0
+ProgFill.Parent = ProgBg
+Instance.new("UICorner", ProgFill).CornerRadius = UDim.new(1, 0)
+
+local ProgGrad = Instance.new("UIGradient")
+ProgGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 180, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 255, 180)),
+})
+ProgGrad.Parent = ProgFill
+
+-- Toggle Button
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Name = "ToggleBtn"
+ToggleBtn.Size = UDim2.new(1, -24, 0, 42)
+ToggleBtn.Position = UDim2.new(0, 12, 0, 238)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 160, 220)
+ToggleBtn.Text = "⏸  TẠM DỪNG"
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.TextColor3 = Color3.new(1, 1, 1)
+ToggleBtn.TextSize = 14
+ToggleBtn.BorderSizePixel = 0
+ToggleBtn.Parent = Body
+Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 10)
+
+local BtnGrad = Instance.new("UIGradient")
+BtnGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 180, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 120, 200)),
+})
+BtnGrad.Rotation = 90
+BtnGrad.Parent = ToggleBtn
+
+-- ══════════════════════════════
+--       ANIMATIONS
+-- ══════════════════════════════
+
+-- Pulse ring loop
+local function pulsate()
+    while true do
+        TweenService:Create(PulseRing, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 24, 0, 24),
+            Position = UDim2.new(0, 9, 0.5, -12),
+        }):Play()
+        TweenService:Create(PRStroke, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Transparency = 1,
+        }):Play()
+        task.wait(0.85)
+        PulseRing.Size = UDim2.new(0, 10, 0, 10)
+        PulseRing.Position = UDim2.new(0, 16, 0.5, -5)
+        PRStroke.Transparency = 0
+        task.wait(0.15)
+    end
+end
+
+-- Border glow pulse
+local function borderGlow()
+    while true do
+        TweenService:Create(BorderFrame, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+            BackgroundColor3 = Color3.fromRGB(0, 255, 180),
+        }):Play()
+        task.wait(1.5)
+        TweenService:Create(BorderFrame, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+            BackgroundColor3 = Color3.fromRGB(0, 100, 255),
+        }):Play()
+        task.wait(1.5)
+    end
+end
+
+-- Progress bar bounce
+local progDir = 1
+local progVal = 0
+local function updateProgress()
+    while true do
+        progVal = progVal + 0.008 * progDir
+        if progVal >= 1 then progDir = -1 end
+        if progVal <= 0 then progDir = 1 end
+        ProgFill.Size = UDim2.new(math.max(0.05, progVal), 0, 1, 0)
+        task.wait(0.03)
+    end
+end
+
+-- Uptime updater
+local function updateStats()
+    while true do
+        local elapsed = os.time() - State.startTime
+        local mins = math.floor(elapsed / 60)
+        local secs = elapsed % 60
+        UptimeLabel.Text = string.format("%02d:%02d", mins, secs)
+        ResetCountLabel.Text = tostring(State.resetCount)
+        task.wait(1)
+    end
+end
+
+-- ══════════════════════════════
+--        DRAG LOGIC
+-- ══════════════════════════════
+Header.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        State.dragging = true
+        State.dragStart = input.Position
+        State.startPos = Main.Position
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if State.dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - State.dragStart
+        Main.Position = UDim2.new(
+            State.startPos.X.Scale,
+            State.startPos.X.Offset + delta.X,
+            State.startPos.Y.Scale,
+            State.startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        State.dragging = false
+    end
+end)
+
+-- ══════════════════════════════
+--      MINIMIZE BUTTON
+-- ══════════════════════════════
+local minimized = false
+MinBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    TweenService:Create(Main, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+        Size = minimized and UDim2.new(0, 280, 0, 60) or UDim2.new(0, 280, 0, 320),
+    }):Play()
+    MinBtn.Text = minimized and "+" or "−"
+end)
+
+-- ══════════════════════════════
+--      TOGGLE BUTTON
+-- ══════════════════════════════
+ToggleBtn.MouseButton1Click:Connect(function()
+    State.enabled = not State.enabled
+
+    if State.enabled then
+        ToggleBtn.Text = "⏸  TẠM DỪNG"
+        TweenService:Create(BtnGrad, TweenInfo.new(0.3), {}):Play()
+        BtnGrad.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 180, 255)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 120, 200)),
+        })
+        StatusText.Text = "ĐANG BẢO VỆ"
+        StatusText.TextColor3 = CONFIG.GreenColor
+        StatusSub.Text = "Hệ thống Anti-AFK đang hoạt động"
+        PulseDot.BackgroundColor3 = CONFIG.GreenColor
+        PRStroke.Color = CONFIG.GreenColor
+    else
+        ToggleBtn.Text = "▶  BẬT LẠI"
+        BtnGrad.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(200, 60, 80)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(140, 30, 50)),
+        })
+        StatusText.Text = "ĐÃ TẮT"
+        StatusText.TextColor3 = CONFIG.RedColor
+        StatusSub.Text = "Nhấn BẬT LẠI để tiếp tục bảo vệ"
+        PulseDot.BackgroundColor3 = CONFIG.RedColor
+        PRStroke.Color = CONFIG.RedColor
+    end
+end)
+
+-- Hover effect
+ToggleBtn.MouseEnter:Connect(function()
+    TweenService:Create(ToggleBtn, TweenInfo.new(0.15), {
+        Size = UDim2.new(1, -20, 0, 44),
+        Position = UDim2.new(0, 10, 0, 237),
+    }):Play()
+end)
+ToggleBtn.MouseLeave:Connect(function()
+    TweenService:Create(ToggleBtn, TweenInfo.new(0.15), {
+        Size = UDim2.new(1, -24, 0, 42),
+        Position = UDim2.new(0, 12, 0, 238),
+    }):Play()
+end)
+
+-- ══════════════════════════════
+--      CORE ANTI-AFK LOGIC
+-- ══════════════════════════════
+player.Idled:Connect(function()
+    if not State.enabled then return end
+
+    VirtualUser:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+    task.wait(0.5)
+    VirtualUser:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+
+    State.resetCount += 1
+
+    -- Flash effect on reset
+    TweenService:Create(StatusCard, TweenInfo.new(0.1), {
+        BackgroundColor3 = Color3.fromRGB(0, 60, 40),
+    }):Play()
+    task.wait(0.2)
+    TweenService:Create(StatusCard, TweenInfo.new(0.3), {
+        BackgroundColor3 = CONFIG.CardColor,
+    }):Play()
+
+    print(string.format("[Anti-AFK] Reset #%d lúc %s", State.resetCount, os.date("%H:%M:%S")))
+end)
+
+-- ══════════════════════════════
+--      ENTRY ANIMATION
+-- ══════════════════════════════
+Main.Position = UDim2.new(1, 20, 0, 20)
+Main.BackgroundTransparency = 1
+TweenService:Create(Main, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+    Position = UDim2.new(1, -300, 0, 20),
+    BackgroundTransparency = 0,
+}):Play()
+
+-- ══════════════════════════════
+--      START LOOPS
+-- ══════════════════════════════
+task.spawn(pulsate)
+task.spawn(borderGlow)
+task.spawn(updateProgress)
+task.spawn(updateStats)
+
+print("╔══════════════════════════════╗")
+print("║   Anti-AFK v2.0  — ONLINE   ║")
+print("╚══════════════════════════════╝")
