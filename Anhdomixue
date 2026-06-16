@@ -1,6 +1,6 @@
 -- ╔══════════════════════════════════════════╗
 -- ║        ANTI-AFK SYSTEM v2.0              ║
--- ║     Made with ❤️  | LocalScript          ║
+-- ║     Made with Nguyen Tru ( tru897tr)  | LocalScript          ║
 -- ╚══════════════════════════════════════════╝
 
 local Players = game:GetService("Players")
